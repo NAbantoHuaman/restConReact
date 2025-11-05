@@ -3,6 +3,7 @@ import { LanguageProvider } from './contexts/LanguageContext';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import Header from './components/Header';
 import Footer from './components/Footer';
+import AnimationToggle from './components/AnimationToggle';
 import Home from './pages/Home';
 import Menu from './pages/Menu';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -59,6 +60,7 @@ function AppContent() {
         </Routes>
       </main>
       {!isAdminRoute && <Footer />}
+      <AnimationToggle />
     </div>
   );
 }

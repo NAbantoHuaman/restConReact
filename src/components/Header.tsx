@@ -167,7 +167,7 @@ export default function Header({ currentPage }: HeaderProps) {
               <h1 className="navbar-title">Bella Vista</h1>
             </div>
 
-            <nav className="navbar-nav">
+            <nav className="navbar-nav" role="navigation" aria-label="Navegación principal">
               <div className="navbar-links">
                 {navItems.map((item) => {
                   const Icon = item.icon;
@@ -178,6 +178,7 @@ export default function Header({ currentPage }: HeaderProps) {
                       key={item.id}
                       to={item.path}
                       className={`navbar-link ${isActive ? 'active' : ''}`}
+                      aria-current={isActive ? 'page' : undefined}
                     >
                       <Icon style={{ height: '1.25rem', width: '1.25rem' }} />
                       <span className="navbar-link-text">{item.label}</span>

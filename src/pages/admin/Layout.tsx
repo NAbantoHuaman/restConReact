@@ -15,12 +15,12 @@ export default function AdminLayout() {
           <Utensils className="h-6 w-6 text-amber-300" />
           <div className="font-semibold">Panel Administrativo</div>
         </div>
-        <nav className="flex md:flex-col flex-row gap-1 md:gap-2 overflow-x-auto">
-          <Link to="/admin/dashboard" className={`inline-flex items-center gap-2 px-3 py-2 rounded transition-colors hover:bg-amber-600/20 ${isActive('/admin/dashboard') ? 'bg-amber-600/30' : ''}`}><LayoutDashboard className="h-4 w-4 text-amber-300" />Dashboard</Link>
-          <Link to="/admin/menu" className={`inline-flex items-center gap-2 px-3 py-2 rounded transition-colors hover:bg-amber-600/20 ${isActive('/admin/menu') ? 'bg-amber-600/30' : ''}`}><NotebookTabs className="h-4 w-4 text-amber-300" />Menú</Link>
-          <Link to="/admin/reservations" className={`inline-flex items-center gap-2 px-3 py-2 rounded transition-colors hover:bg-amber-600/20 ${isActive('/admin/reservations') ? 'bg-amber-600/30' : ''}`}><CalendarDays className="h-4 w-4 text-amber-300" />Reservas</Link>
-          <Link to="/admin/settings" className={`inline-flex items-center gap-2 px-3 py-2 rounded transition-colors hover:bg-amber-600/20 ${isActive('/admin/settings') ? 'bg-amber-600/30' : ''}`}><Settings className="h-4 w-4 text-amber-300" />Configuración</Link>
-          <Link to="/admin/logs" className={`inline-flex items-center gap-2 px-3 py-2 rounded transition-colors hover:bg-amber-600/20 ${isActive('/admin/logs') ? 'bg-amber-600/30' : ''}`}><FileText className="h-4 w-4 text-amber-300" />Logs</Link>
+        <nav aria-label="Navegación administrativa" className="flex md:flex-col flex-row gap-1 md:gap-2 overflow-x-auto">
+          <Link to="/admin/dashboard" aria-current={isActive('/admin/dashboard') ? 'page' : undefined} className={`inline-flex items-center gap-2 px-3 py-2 rounded transition-colors hover:bg-amber-600/20 ${isActive('/admin/dashboard') ? 'bg-amber-600/30' : ''}`}><LayoutDashboard className="h-4 w-4 text-amber-300" />Dashboard</Link>
+          <Link to="/admin/menu" aria-current={isActive('/admin/menu') ? 'page' : undefined} className={`inline-flex items-center gap-2 px-3 py-2 rounded transition-colors hover:bg-amber-600/20 ${isActive('/admin/menu') ? 'bg-amber-600/30' : ''}`}><NotebookTabs className="h-4 w-4 text-amber-300" />Menú</Link>
+          <Link to="/admin/reservations" aria-current={isActive('/admin/reservations') ? 'page' : undefined} className={`inline-flex items-center gap-2 px-3 py-2 rounded transition-colors hover:bg-amber-600/20 ${isActive('/admin/reservations') ? 'bg-amber-600/30' : ''}`}><CalendarDays className="h-4 w-4 text-amber-300" />Reservas</Link>
+          <Link to="/admin/settings" aria-current={isActive('/admin/settings') ? 'page' : undefined} className={`inline-flex items-center gap-2 px-3 py-2 rounded transition-colors hover:bg-amber-600/20 ${isActive('/admin/settings') ? 'bg-amber-600/30' : ''}`}><Settings className="h-4 w-4 text-amber-300" />Configuración</Link>
+          <Link to="/admin/logs" aria-current={isActive('/admin/logs') ? 'page' : undefined} className={`inline-flex items-center gap-2 px-3 py-2 rounded transition-colors hover:bg-amber-600/20 ${isActive('/admin/logs') ? 'bg-amber-600/30' : ''}`}><FileText className="h-4 w-4 text-amber-300" />Logs</Link>
         </nav>
         <button className="md:mt-auto md:ml-0 ml-auto inline-flex items-center gap-2 px-3 py-2 rounded bg-red-600/80 hover:bg-red-500 transition-colors" onClick={() => { logout(); navigate('/admin/login') }}>
           <LogOut className="h-4 w-4" />Salir
