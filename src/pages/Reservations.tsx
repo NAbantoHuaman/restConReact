@@ -7,7 +7,7 @@ import { formatTimeLabel } from '../utils/dateTime';
 import PersonSelector from '../components/PersonSelector';
 import ReservationQRCode from '../components/ReservationQRCode';
 
-import { createReservationReceiptHTML, downloadReceipt } from '../utils/receipt';
+import { createReservationReceiptHTML, openReceiptInNewTab } from '../utils/receipt';
 
 
 
@@ -152,7 +152,7 @@ export default function Reservations() {
   };
 
   
-  const handleDownloadReceipt = (reservation: any) => {
+  const handleViewReceipt = (reservation: any) => {
     const language = localStorage.getItem("language") || "es";
     const labels = {
       title: language === "en" ? "Reservation Receipt" : "Boleta de Reserva",
@@ -211,8 +211,7 @@ export default function Reservations() {
       labels
     );
 
-    const fileName = `${labels.title.replace(/\s+/g, "_")}_${dateStr}_${timeStr}_${reservation.tableNumber ?? reservation.table ?? ""}.html`;
-    downloadReceipt(fileName, html);
+    openReceiptInNewTab(html);
   };
 
   const toggleQRFor = (id: number) => {
@@ -372,10 +371,10 @@ export default function Reservations() {
                     <div className="mt-3 flex items-center justify-between">
                       <div className="flex gap-2">
                         <button
-                          onClick={() => handleDownloadReceipt(reservation)}
+            onClick={() => handleViewReceipt(reservation)}
                           className="px-3 py-2 border border-amber-300 text-amber-700 rounded-lg hover:bg-amber-50 transition-colors text-xs sm:text-sm"
                         >
-                          {language === 'en' ? 'Download receipt' : 'Descargar boleta'}
+            {language === 'en' ? 'View receipt' : 'Ver boleta'}
                         </button>
                         <button
                           onClick={() => toggleQRFor(reservation.id)}

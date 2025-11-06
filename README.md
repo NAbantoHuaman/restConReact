@@ -75,6 +75,7 @@ Flujo de datos entre módulos:
 - `ReservationForm`/`ReservationWizard` ↔ `useTablesManager`: selección de mesa, verificación de disponibilidad y creación de reservas.
 - `useTablesManager` ↔ `localStorage`: persistencia de `reservations` y `tables`.
 - `Reservations` ↔ `utils/receipt.ts`: generación de comprobante (HTML) y descarga.
+ - `Reservations` ↔ `utils/receipt.ts`: generación de comprobante (HTML) y apertura en nueva pestaña.
 - `ReservationQRCode` → QR payload JSON; `ReservationView` decodifica y muestra.
 
 Patrones de diseño implementados:
@@ -110,7 +111,7 @@ Procesos clave y su implementación:
 - Disponibilidad de mesas: `isTableAvailableForDateTime` compara reservas existentes con la ventana de 120 minutos.
 - Mapeo de mesas del wizard: `WIZARD_TABLE_TO_REAL_TABLE` y `REAL_TO_WIZARD_TABLE` para compatibilidad entre UI y modelo.
 - Persistencia: `localStorage` con `safeParse`, migración de nombres de ubicación legacy (`patio` → `barra`).
-- Recibo y QR: `utils/receipt.ts` arma HTML con `createReservationReceiptHTML` y `downloadReceipt`; `ReservationQRCode` genera QR.
+- Recibo y QR: `utils/receipt.ts` arma HTML con `createReservationReceiptHTML` y `openReceiptInNewTab`; `ReservationQRCode` genera QR.
 
 ## 4. Integraciones
 
@@ -185,9 +186,9 @@ export default function MakeReservationButton() {
 }
 ```
 
-- Generar comprobante HTML y descargar (desde `Reservations`):
+- Generar comprobante HTML y abrir en nueva pestaña (desde `Reservations`):
 ```ts
-import { createReservationReceiptHTML, downloadReceipt } from '../utils/receipt';
+import { createReservationReceiptHTML, openReceiptInNewTab } from '../utils/receipt';
 
 const html = createReservationReceiptHTML({
   date: '2025-01-01',
@@ -217,7 +218,7 @@ const html = createReservationReceiptHTML({
   qr: 'Código QR'
 });
 
-downloadReceipt('Reserva_Juan_Perez.html', html);
+openReceiptInNewTab(html);
 ```
 
 - Construcción del payload de QR y uso:

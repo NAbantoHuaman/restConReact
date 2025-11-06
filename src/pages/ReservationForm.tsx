@@ -8,7 +8,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { formatTimeLabel } from '../utils/dateTime';
 
 
-import { createReservationReceiptHTML, downloadReceipt } from '../utils/receipt';
+import { createReservationReceiptHTML, openReceiptInNewTab } from '../utils/receipt';
 
 interface ReservationData {
   adults: number;
@@ -94,7 +94,7 @@ export default function ReservationForm() {
   };
 
   // ICS deprecated: se usa boleta HTML
-  const handleDownloadReceipt = () => {
+  const handleViewReceipt = () => {
     const labels = {
       title: language === 'en' ? 'Reservation Receipt' : 'Boleta de Reserva',
       date: language === 'en' ? 'Date' : 'Fecha',
@@ -156,8 +156,7 @@ export default function ReservationForm() {
       labels
     );
 
-    const fileName = `${labels.title.replace(/\s+/g, '_')}_${dateStr}_${timeStr}_${tableLabelFromSelection ?? ''}.html`;
-    downloadReceipt(fileName, html);
+    openReceiptInNewTab(html);
   };
   const canProceed = () => {
     switch (LOCALIZED_STEPS[currentStep].id) {
@@ -440,8 +439,8 @@ export default function ReservationForm() {
               </div>
               <div className="mt-4 flex flex-col gap-3">
                 <div className="flex items-center justify-center">
-                  <button onClick={handleDownloadReceipt} className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
-                    {language === 'en' ? 'Download receipt' : 'Descargar boleta'}
+                  <button onClick={handleViewReceipt} className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
+                    {language === 'en' ? 'View receipt' : 'Ver boleta'}
                   </button>
                 </div>
               </div>

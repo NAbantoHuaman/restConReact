@@ -137,3 +137,18 @@ export function downloadReceipt(fileName: string, html: string) {
   a.remove();
   URL.revokeObjectURL(url);
 }
+
+// Abre la boleta en una pestaña nueva escribiendo el HTML directamente
+export function openReceiptInNewTab(html: string) {
+  const w = window.open('about:blank', '_blank');
+  if (!w) return;
+  try {
+    w.document.open();
+    w.document.write(html);
+    w.document.close();
+    // En algunos navegadores, forzar el foco ayuda
+    w.focus();
+  } catch (e) {
+    console.error('No se pudo abrir la boleta en nueva pestaña', e);
+  }
+}
