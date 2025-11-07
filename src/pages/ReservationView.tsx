@@ -1,9 +1,11 @@
 
 import { useLocation, Link } from 'react-router-dom';
 import { useLanguage } from '../contexts/LanguageContext';
+import { listReservations } from '../services/adminDb';
 import { formatTimeLabel } from '../utils/dateTime';
 
 interface QrPayload {
+  id?: number | string;
   type?: string;
   date?: string;
   time?: string;
@@ -48,6 +50,27 @@ export default function ReservationView() {
   }
 
   const timeLabel = payload.time ? formatTimeLabel(language as 'en' | 'es', payload.time) : '';
+  // Obtener estado de asistencia desde almacenamiento
+  let attendedLabel: string | null = null;
+  try {
+    const all = listReservations();
+    let match: any = null;
+    if (payload.id !== undefined && payload.id !== null) {
+      match = all.find((r: any) => String(r.id) === String(payload.id));
+    }
+    if (!match) {
+      match = all.find((r: any) => {
+        const sameDate = r.date === payload.date;
+        const sameTime = r.time === payload.time;
+        const sameCustomer = (r.customerName || '').trim() === (payload.customer || '').trim();
+        const sameTable = String(r.tableNumber ?? r.tableId ?? '') === String(payload.table ?? '');
+        return sameDate && sameTime && sameCustomer && sameTable;
+      });
+    }
+    if (match) {
+      attendedLabel = match.attended ? (language === 'en' ? 'Yes' : 'Sí') : (language === 'en' ? 'No' : 'No');
+    }
+  } catch {}
 
   return (
     <div className="min-h-screen flex items-center justify-center p-6 bg-neutral-50">
@@ -65,6 +88,13 @@ export default function ReservationView() {
             <div>
               <div className="text-xs text-neutral-600">{t('reservations.time')}</div>
               <div className="text-sm font-semibold text-neutral-900">{timeLabel || payload.time || '-'}</div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+            <div>
+              <div className="text-xs text-neutral-600">{language === 'en' ? 'Attendance' : 'Asistencia'}</div>
+              <div className="text-sm font-semibold text-neutral-900">{attendedLabel ?? '-'}</div>
             </div>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">

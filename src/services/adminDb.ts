@@ -81,7 +81,7 @@ export function listCategories(): string[] {
   return Array.from(set)
 }
 
-export type ReservationCancelRecord = { id: ID; reason: string; at: number; snapshot: any }
+export type ReservationCancelRecord = { id: ID; reason: string; at: number; snapshot: any; by?: string }
 
 export function listReservations(): any[] {
   try {
@@ -96,25 +96,53 @@ export function updateReservation(id: ID, patch: any): any | null {
   const all = listReservations()
   const idx = all.findIndex(r => String(r.id) === String(id))
   if (idx === -1) return null
-  const updated = { ...all[idx], ...patch }
+  const prev = all[idx]
+  const updated = { ...prev, ...patch }
   const next = [...all]
   next[idx] = updated
   localStorage.setItem('reservations', JSON.stringify(next))
   appendLog('reservation_update', { id, patch })
+  // Log específico de asistencia si cambia
+  if (Object.prototype.hasOwnProperty.call(patch, 'attended') && patch.attended !== prev.attended) {
+    appendLog('reservation_attendance_update', { id, attended: !!patch.attended })
+  }
+  // Notificar cambios para paneles en vivo
+  try {
+    window.dispatchEvent(new CustomEvent('reservationUpdated', { detail: { reservations: next } }))
+  } catch {}
   return updated
 }
 
-export function cancelReservation(id: ID, reason: string): boolean {
+export function cancelReservation(id: ID, reason: string, by?: string): boolean {
   const all = listReservations()
   const idx = all.findIndex(r => String(r.id) === String(id))
   if (idx === -1) return false
   const snapshot = all[idx]
-  const next = all.filter(r => String(r.id) !== String(id))
+  const updated = { ...snapshot, status: 'cancelled', cancelReason: String(reason || '').trim(), cancelledAt: Date.now(), cancelledBy: by || 'administrador' }
+  const next = [...all]
+  next[idx] = updated
   localStorage.setItem('reservations', JSON.stringify(next))
-  const record: ReservationCancelRecord = { id, reason, at: Date.now(), snapshot }
+  const record: ReservationCancelRecord = { id, reason, at: Date.now(), snapshot: updated, by: by || 'administrador' }
   const hist = read<ReservationCancelRecord[]>(KEYS.cancelled, [])
   write(KEYS.cancelled, [record, ...hist])
-  appendLog('reservation_cancel', { id, reason })
+  appendLog('reservation_cancel', { id, reason, by: by || 'administrador' })
+  return true
+}
+
+export function reactivateReservation(id: ID): boolean {
+  const all = listReservations()
+  const idx = all.findIndex(r => String(r.id) === String(id))
+  if (idx === -1) return false
+  const snapshot = all[idx]
+  const updated = { ...snapshot, status: 'confirmed', cancelReason: undefined, cancelledAt: undefined, cancelledBy: undefined, reactivatedAt: Date.now() }
+  const next = [...all]
+  next[idx] = updated
+  localStorage.setItem('reservations', JSON.stringify(next))
+  appendLog('reservation_reactivate', { id })
+  // Notificación para que paneles escuchen cambios
+  try {
+    window.dispatchEvent(new CustomEvent('reservationUpdated', { detail: { reservations: next } }))
+  } catch {}
   return true
 }
 

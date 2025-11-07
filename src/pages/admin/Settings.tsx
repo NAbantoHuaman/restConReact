@@ -1,6 +1,9 @@
 import { FormEvent, useState } from 'react'
 import { AdminSettings, getSettings, updateSettings } from '../../services/adminDb'
 import { Clock, CalendarDays, CheckCircle } from 'lucide-react'
+import Card from '../../components/admin/ui/Card'
+import Button from '../../components/admin/ui/Button'
+import Input from '../../components/admin/ui/Input'
 
 export default function AdminSettingsPage() {
   const [settings, setSettings] = useState<AdminSettings>(getSettings())
@@ -69,29 +72,33 @@ export default function AdminSettingsPage() {
   }
   return (
     <div className="grid gap-6">
-      <div className="text-2xl font-semibold tracking-tight">Configuración</div>
-      {error && <div className="p-2 rounded bg-red-900/40 border border-red-500 text-red-200 text-sm">{error}</div>}
-      {notice && <div className="p-2 rounded bg-emerald-900/30 border border-emerald-600 text-emerald-200 text-sm inline-flex items-center gap-2"><CheckCircle className="h-4 w-4" />{notice}</div>}
+      <h1 className="text-2xl font-semibold tracking-tight">Ajustes</h1>
+      {error && <div role="alert" className="p-2 rounded-xl bg-red-50 border border-red-200 text-red-700 dark:bg-red-900/40 dark:border-red-600 dark:text-red-200 text-sm">{error}</div>}
+      {notice && <div role="status" className="p-2 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 dark:bg-emerald-900/30 dark:border-emerald-600 dark:text-emerald-200 text-sm inline-flex items-center gap-2"><CheckCircle className="h-4 w-4" />{notice}</div>}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <form onSubmit={addHours} className="grid gap-2 bg-black/30 border border-amber-700/30 p-4 rounded-xl">
-          <div className="font-semibold inline-flex items-center gap-2"><Clock className="h-4 w-4 text-amber-300" />Horarios</div>
-          <input placeholder="Día" value={day} onChange={e => setDay(e.target.value)} className="bg-neutral-800 text-white border border-neutral-700 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-400" />
-          <input placeholder="Apertura (HH:MM)" value={open} onChange={e => setOpen(e.target.value)} className="bg-neutral-800 text-white border border-neutral-700 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-400" />
-          <input placeholder="Cierre (HH:MM)" value={close} onChange={e => setClose(e.target.value)} className="bg-neutral-800 text-white border border-neutral-700 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-400" />
-          <button className="bg-amber-500 hover:bg-amber-400 text-black font-semibold rounded px-3 py-2 transition-colors">Agregar</button>
-          <div className="grid gap-2">
-            {settings.operatingHours.map((h, i) => (<div key={i} className="text-sm text-neutral-300">{h.day} · {h.open}-{h.close}</div>))}
-          </div>
-        </form>
-        <form onSubmit={addSpecial} className="grid gap-2 bg-black/30 border border-amber-700/30 p-4 rounded-xl">
-          <div className="font-semibold inline-flex items-center gap-2"><CalendarDays className="h-4 w-4 text-amber-300" />Días especiales</div>
-          <input placeholder="Fecha (YYYY-MM-DD)" value={spDate} onChange={e => setSpDate(e.target.value)} className="bg-neutral-800 text-white border border-neutral-700 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-400" />
-          <input placeholder="Nota" value={spNote} onChange={e => setSpNote(e.target.value)} className="bg-neutral-800 text-white border border-neutral-700 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-400" />
-          <button className="bg-amber-500 hover:bg-amber-400 text-black font-semibold rounded px-3 py-2 transition-colors">Agregar</button>
-          <div className="grid gap-2">
-            {settings.specialDays.map((d, i) => (<div key={i} className="text-sm text-neutral-300">{d.date} · {d.note || ''}</div>))}
-          </div>
-        </form>
+        <Card className="p-4">
+          <form onSubmit={addHours} className="grid gap-3">
+            <div className="font-semibold inline-flex items-center gap-2"><Clock className="h-4 w-4 text-accent-600 dark:text-accent-400" />Horarios</div>
+            <Input label="Día" value={day} onChange={e => setDay(e.target.value)} />
+            <Input label="Apertura (HH:MM)" value={open} onChange={e => setOpen(e.target.value)} />
+            <Input label="Cierre (HH:MM)" value={close} onChange={e => setClose(e.target.value)} />
+            <Button type="submit">Agregar</Button>
+            <div className="grid gap-2">
+              {settings.operatingHours.map((h, i) => (<div key={i} className="text-sm text-neutral-600 dark:text-neutral-300">{h.day} · {h.open}-{h.close}</div>))}
+            </div>
+          </form>
+        </Card>
+        <Card className="p-4">
+          <form onSubmit={addSpecial} className="grid gap-3">
+            <div className="font-semibold inline-flex items-center gap-2"><CalendarDays className="h-4 w-4 text-accent-600 dark:text-accent-400" />Días especiales</div>
+            <Input label="Fecha (YYYY-MM-DD)" value={spDate} onChange={e => setSpDate(e.target.value)} />
+            <Input label="Nota" value={spNote} onChange={e => setSpNote(e.target.value)} />
+            <Button type="submit">Agregar</Button>
+            <div className="grid gap-2">
+              {settings.specialDays.map((d, i) => (<div key={i} className="text-sm text-neutral-600 dark:text-neutral-300">{d.date} · {d.note || ''}</div>))}
+            </div>
+          </form>
+        </Card>
       </div>
     </div>
   )

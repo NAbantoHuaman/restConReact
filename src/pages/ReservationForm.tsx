@@ -34,6 +34,12 @@ export default function ReservationForm() {
   const { addReservation, tables, getTableIdFromWizardId } = useTablesManager();
   const { t, language } = useLanguage();
   const locale = language === 'en' ? 'en-US' : 'es-PE';
+  // Parser local para 'YYYY-MM-DD' evitando desfases por UTC
+  const parseLocalDate = (iso: string) => {
+    const [y, m, d] = (iso || '').split('-').map(Number);
+    if (!y || !m || !d) return new Date();
+    return new Date(y, m - 1, d);
+  };
   const [currentStep, setCurrentStep] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
@@ -417,7 +423,7 @@ export default function ReservationForm() {
                 <div className="text-sm text-green-800 space-y-1">
                   <p><span className="font-medium">{t('reservations.date')}:</span>{' '}
                     {reservationData.date
-                      ? new Date(reservationData.date).toLocaleDateString(locale, {
+                      ? parseLocalDate(reservationData.date).toLocaleDateString(locale, {
                           weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
                         })
                       : t('reservations.notSelected')}
@@ -565,8 +571,17 @@ function StepFecha({ data, onUpdate }: { data: ReservationData; onUpdate: (data:
   const { tables, isTableAvailableForDateTime } = useTablesManager();
   const locale = language === 'en' ? 'en-US' : 'es-PE';
 
+  // Evita el desfase de un día al formatear 'YYYY-MM-DD'
+  const parseLocalDate = (iso: string) => {
+    const [y, m, d] = iso.split('-').map(Number);
+    return new Date(y, (m || 1) - 1, d || 1);
+  };
+
   const formatDate = (date: Date) => {
-    return date.toISOString().split('T')[0];
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
   };
 
   
@@ -578,7 +593,7 @@ function StepFecha({ data, onUpdate }: { data: ReservationData; onUpdate: (data:
   
   
   const [currentMonth, setCurrentMonth] = useState<Date>(() => {
-    const base = data.date ? new Date(data.date) : new Date();
+    const base = data.date ? parseLocalDate(data.date) : new Date();
     return new Date(base.getFullYear(), base.getMonth(), 1);
   });
   const [isTransitioningMonth, setIsTransitioningMonth] = useState(false);
@@ -825,7 +840,7 @@ function StepFecha({ data, onUpdate }: { data: ReservationData; onUpdate: (data:
             <div className="mt-4 bg-amber-50 border border-amber-200 rounded-lg p-3 text-center">
               <p className="text-amber-800 text-sm">
                 <span className="font-semibold">{t('reservations.selectedDate')}: </span>
-                {new Date(data.date).toLocaleDateString(locale, {
+                {parseLocalDate(data.date).toLocaleDateString(locale, {
                   weekday: 'long',
                   year: 'numeric',
                   month: 'long',
@@ -874,7 +889,7 @@ function StepFecha({ data, onUpdate }: { data: ReservationData; onUpdate: (data:
                 <div className="mb-3">
                   <div className="text-xs font-semibold text-neutral-600 uppercase tracking-wide">{t('reservations.form.date')}</div>
                   <div className="mt-1 text-lg font-bold text-amber-900">
-                    {new Date(data.date!).toLocaleDateString(locale, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                    {parseLocalDate(data.date!).toLocaleDateString(locale, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
                   </div>
                 </div>
 
@@ -1003,7 +1018,7 @@ function StepFecha({ data, onUpdate }: { data: ReservationData; onUpdate: (data:
             {/* Header */}
             <div className="flex items-center justify-between mb-3">
               <div className="text-neutral-900 font-bold text-lg">
-                {t('reservations.selectedDate')}: {data.date ? new Date(data.date).toLocaleDateString(locale, { weekday: 'long', day: 'numeric', month: 'long' }) : ''}
+                {t('reservations.selectedDate')}: {data.date ? parseLocalDate(data.date).toLocaleDateString(locale, { weekday: 'long', day: 'numeric', month: 'long' }) : ''}
               </div>
               <button
                 onClick={() => setShowTimeModal(false)}
@@ -1232,6 +1247,12 @@ function StepDatos({ data, onUpdate }: { data: ReservationData; onUpdate: (data:
   const { t, language } = useLanguage();
   const locale = language === 'en' ? 'en-US' : 'es-PE';
 
+  // Parsear 'YYYY-MM-DD' como fecha local para evitar desfases por UTC
+  const parseLocalDate = (iso: string) => {
+    const [y, m, d] = iso.split('-').map(Number);
+    return new Date(y, (m || 1) - 1, d || 1);
+  };
+
   const validateField = (field: string, value: string) => {
     const newErrors = { ...errors };
     
@@ -1289,15 +1310,16 @@ function StepDatos({ data, onUpdate }: { data: ReservationData; onUpdate: (data:
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
           <div>
             <p className="text-amber-800">
-              <span className="font-medium">{t('reservations.people')}:</span> {totalGuests} 
-              {data.adults && ` (${data.adults} ${t('reservations.adults')}`}
-              {data.children && data.children > 0 && `, ${data.children} ${t('reservations.children')}`}
-              {data.babies && data.babies > 0 && `, ${data.babies} ${t('reservations.babies')}`}
-              {data.adults && ')'}
+              <span className="font-medium">{t('reservations.people')}:</span> {totalGuests}
+              { (data.adults > 0 || data.children > 0 || data.babies > 0) ? ' (' : '' }
+              { data.adults > 0 ? `${data.adults} ${t('reservations.adults')}` : '' }
+              { data.children > 0 ? `${data.adults > 0 ? ', ' : ''}${data.children} ${t('reservations.children')}` : '' }
+              { data.babies > 0 ? `${(data.adults > 0 || data.children > 0) ? ', ' : ''}${data.babies} ${t('reservations.babies')}` : '' }
+              { (data.adults > 0 || data.children > 0 || data.babies > 0) ? ')' : '' }
             </p>
             <p className="text-amber-800">
               <span className="font-medium">{t('reservations.date')}:</span> {data.date
-                 ? new Date(data.date).toLocaleDateString(locale, {
+                 ? parseLocalDate(data.date).toLocaleDateString(locale, {
                      weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
                    })
                  : t('reservations.notSelected')}
@@ -1411,11 +1433,11 @@ function StepDatos({ data, onUpdate }: { data: ReservationData; onUpdate: (data:
             className="mt-1 h-4 w-4 text-amber-600 focus:ring-amber-500 border-neutral-300 rounded"
           />
           <label htmlFor="acceptTerms" className="text-sm text-neutral-700">
-            {t('reservations.acceptTermsStart')}
+            {t('reservations.errors.acceptTermsStart')}
             <a href="#" className="text-amber-600 hover:text-amber-700 underline">
               {t('footer.termsOfService')}
             </a>
-            {t('reservations.acceptTermsAnd')}
+            {t('reservations.errors.acceptTermsAnd')}
             <a href="#" className="text-amber-600 hover:text-amber-700 underline">
               {t('footer.privacyPolicy')}
             </a>

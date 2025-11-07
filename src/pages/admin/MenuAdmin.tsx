@@ -1,6 +1,9 @@
 import { FormEvent, useMemo, useState } from 'react'
 import { createMenuItem, deleteMenuItem, listCategories, listMenuItems, updateMenuItem } from '../../services/adminDb'
 import { PlusCircle, Pencil, Trash2, Image as ImageIcon, CheckCircle } from 'lucide-react'
+import Card from '../../components/admin/ui/Card'
+import Button from '../../components/admin/ui/Button'
+import Input from '../../components/admin/ui/Input'
 
 type Draft = {
   name: string
@@ -54,42 +57,46 @@ export default function MenuAdmin() {
   const visible = items.filter(i => (filter ? i.category === filter : true))
   return (
     <div className="grid gap-6">
-      <div className="text-2xl font-semibold tracking-tight">Menú</div>
-      {error && <div className="p-2 rounded bg-red-900/40 border border-red-500 text-red-200 text-sm">{error}</div>}
-      {notice && <div className="p-2 rounded bg-emerald-900/30 border border-emerald-600 text-emerald-200 text-sm inline-flex items-center gap-2"><CheckCircle className="h-4 w-4" />{notice}</div>}
-      <form onSubmit={onCreate} className="grid gap-3 bg-black/30 border border-amber-700/30 p-4 rounded-xl">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <input placeholder="Nombre" value={draft.name} onChange={e => setDraft({ ...draft, name: e.target.value })} className="bg-neutral-800 text-white border border-neutral-700 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-400" />
-          <input placeholder="Precio" value={draft.price} onChange={e => setDraft({ ...draft, price: e.target.value })} className="bg-neutral-800 text-white border border-neutral-700 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-400" />
-          <input placeholder="Categoría" value={draft.category} onChange={e => setDraft({ ...draft, category: e.target.value })} className="bg-neutral-800 text-white border border-neutral-700 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-400" />
-          <input placeholder="Imagen URL" value={draft.imageUrl} onChange={e => setDraft({ ...draft, imageUrl: e.target.value })} className="bg-neutral-800 text-white border border-neutral-700 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-400" />
-        </div>
-        <textarea placeholder="Descripción" value={draft.description} onChange={e => setDraft({ ...draft, description: e.target.value })} className="bg-neutral-800 text-white border border-neutral-700 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-400" />
-        <label className="inline-flex items-center gap-2 text-sm"><input type="checkbox" checked={draft.available} onChange={e => setDraft({ ...draft, available: e.target.checked })} /><span>Disponible</span></label>
-        <button className="inline-flex items-center gap-2 bg-amber-500 hover:bg-amber-400 text-black font-semibold rounded px-3 py-2 w-max transition-colors"><PlusCircle className="h-4 w-4" />Agregar plato</button>
-      </form>
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-semibold tracking-tight">Menú</h1>
+        {notice && <div className="inline-flex items-center gap-2 text-sm text-emerald-700 dark:text-emerald-200"><CheckCircle className="h-4 w-4" />{notice}</div>}
+      </div>
+      {error && <div role="alert" className="p-2 rounded-xl bg-red-50 border border-red-200 text-red-700 dark:bg-red-900/40 dark:border-red-600 dark:text-red-200 text-sm">{error}</div>}
+      <Card className="p-4">
+        <form onSubmit={onCreate} className="grid gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <Input label="Nombre" value={draft.name} onChange={e => setDraft({ ...draft, name: e.target.value })} />
+            <Input label="Precio" value={draft.price} onChange={e => setDraft({ ...draft, price: e.target.value })} />
+            <Input label="Categoría" value={draft.category} onChange={e => setDraft({ ...draft, category: e.target.value })} />
+            <Input label="Imagen URL" value={draft.imageUrl} onChange={e => setDraft({ ...draft, imageUrl: e.target.value })} />
+          </div>
+          <textarea placeholder="Descripción" value={draft.description} onChange={e => setDraft({ ...draft, description: e.target.value })} className="w-full bg-transparent border border-neutral-300 dark:border-neutral-700 rounded-xl px-3 py-3 text-neutral-900 dark:text-neutral-100 focus:outline-none focus:ring-2 focus:ring-accent-300" />
+          <label className="inline-flex items-center gap-2 text-sm"><input type="checkbox" checked={draft.available} onChange={e => setDraft({ ...draft, available: e.target.checked })} /><span>Disponible</span></label>
+          <Button type="submit"><PlusCircle className="h-4 w-4" />Agregar plato</Button>
+        </form>
+      </Card>
       <div className="flex items-center gap-2">
-        <span className="text-sm text-amber-200">Filtrar categoría</span>
-        <select value={filter} onChange={e => setFilter(e.target.value)} className="bg-neutral-800 text-white border border-neutral-700 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-amber-400">
+        <span className="text-sm text-neutral-600 dark:text-neutral-300">Filtrar categoría</span>
+        <select value={filter} onChange={e => setFilter(e.target.value)} className="bg-transparent border border-neutral-300 dark:border-neutral-700 rounded-xl px-2 py-2 text-neutral-900 dark:text-neutral-100 focus:outline-none focus:ring-2 focus:ring-accent-300">
           <option value="">Todas</option>
           {cats.map(c => (<option key={c} value={c}>{c}</option>))}
         </select>
       </div>
       <div className="grid gap-3">
         {visible.map(i => (
-          <div key={String(i.id)} className="p-3 bg-black/30 border border-amber-700/30 rounded-xl grid grid-cols-[80px_1fr_auto] gap-3 items-center hover:border-amber-500 transition-colors">
-            {i.imageUrl ? <img src={i.imageUrl} alt={i.name} className="w-20 h-20 object-cover rounded" /> : <div className="w-20 h-20 bg-neutral-800 rounded grid place-items-center"><ImageIcon className="h-6 w-6 text-neutral-500" /></div>}
+          <Card key={String(i.id)} className="p-3 grid grid-cols-[80px_1fr_auto] gap-3 items-center">
+            {i.imageUrl ? <img src={i.imageUrl} alt={i.name} className="w-20 h-20 object-cover rounded-xl" /> : <div className="w-20 h-20 bg-neutral-100 dark:bg-neutral-800 rounded-xl grid place-items-center"><ImageIcon className="h-6 w-6 text-neutral-500" /></div>}
             <div>
-              <div className="font-semibold text-white">{i.name}</div>
-              <div className="text-sm text-neutral-300">{i.description}</div>
-              <div className="text-sm text-amber-200">{i.category} · S/ {i.price.toFixed(2)}</div>
+              <div className="font-semibold">{i.name}</div>
+              <div className="text-sm text-neutral-600 dark:text-neutral-300">{i.description}</div>
+              <div className="text-sm text-accent-700 dark:text-accent-300">{i.category} · S/ {i.price.toFixed(2)}</div>
               <label className="inline-flex items-center gap-2 mt-1 text-sm"><input type="checkbox" checked={i.available} onChange={e => onUpdate(i.id, { available: e.target.checked })} /><span>Disponible</span></label>
             </div>
-            <div className="flex gap-2">
-              <button className="inline-flex items-center gap-1 px-2 py-1 border border-neutral-700 rounded hover:bg-neutral-800 transition-colors" onClick={() => onUpdate(i.id, { name: prompt('Nombre', i.name) || i.name })}><Pencil className="h-4 w-4" />Editar</button>
-              <button className="inline-flex items-center gap-1 px-2 py-1 border border-red-700 rounded text-red-400 hover:bg-red-900/40 transition-colors" onClick={() => onDelete(i.id)}><Trash2 className="h-4 w-4" />Eliminar</button>
+            <div className="flex gap-2 justify-self-end">
+              <Button variant="outline" size="sm" onClick={() => onUpdate(i.id, { name: prompt('Nombre', i.name) || i.name })}><Pencil className="h-4 w-4" />Editar</Button>
+              <Button variant="danger" size="sm" onClick={() => onDelete(i.id)}><Trash2 className="h-4 w-4" />Eliminar</Button>
             </div>
-          </div>
+          </Card>
         ))}
       </div>
     </div>

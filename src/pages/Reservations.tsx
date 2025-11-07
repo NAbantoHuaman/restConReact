@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Calendar, Clock, Users, Phone, Plus, Trash2, AlertCircle } from 'lucide-react';
+import { Calendar, Clock, Users, Phone, Plus, AlertCircle, Ban, Info, Trash } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useTablesManager } from '../hooks/useTablesManager';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useAuth } from '../contexts/AuthContext';
 import { formatTimeLabel } from '../utils/dateTime';
 import PersonSelector from '../components/PersonSelector';
 import ReservationQRCode from '../components/ReservationQRCode';
@@ -17,12 +18,20 @@ export default function Reservations() {
     reservations, 
     addReservation, 
     removeReservation, 
+    cancelReservation,
     refreshReservations,
     getAvailableTablesForDateTime,
   } = useTablesManager();
+  const { user } = useAuth();
   
   const { t, language } = useLanguage();
   const locale = language === 'en' ? 'en-US' : 'es-PE';
+  // Parsear 'YYYY-MM-DD' como fecha local para evitar desfases por UTC
+  const parseLocalDate = (iso: string) => {
+    const [y, m, d] = (iso || '').split('-').map(Number);
+    if (!y || !m || !d) return new Date();
+    return new Date(y, m - 1, d);
+  };
   
   const [showModal, setShowModal] = useState(false);
   const [error, setError] = useState('');
@@ -40,6 +49,9 @@ export default function Reservations() {
     babies: 0,
   });
   const [showQRId, setShowQRId] = useState<number | null>(null);
+  const [cancelModal, setCancelModal] = useState<{open: boolean; targetId: number | null; reason: string}>({open: false, targetId: null, reason: ''});
+  const [detailsModal, setDetailsModal] = useState<{open: boolean; reservation: any | null}>({open: false, reservation: null});
+  const [selectedStatus, setSelectedStatus] = useState<'all' | 'confirmed' | 'cancelled'>('all');
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -179,6 +191,7 @@ export default function Reservations() {
 
     
     const qrPayloadObj = {
+      id: reservation.id ?? undefined,
       type: "reservation",
       date: dateStr,
       time: timeStr,
@@ -218,7 +231,8 @@ export default function Reservations() {
     setShowQRId(prev => (prev === id ? null : id));
   };
 
-  const sortedReservations = [...reservations].sort((a, b) => {
+  const filtered = reservations.filter(r => selectedStatus === 'all' ? true : r.status === selectedStatus);
+  const sortedReservations = [...filtered].sort((a, b) => {
     const dateA = new Date(a.date + 'T' + a.time);
     const dateB = new Date(b.date + 'T' + b.time);
     return dateB.getTime() - dateA.getTime();
@@ -286,6 +300,19 @@ export default function Reservations() {
             </div>
           </div>
 
+          <div className="flex flex-wrap items-center gap-3 mb-4">
+            <label className="text-sm text-neutral-700">{language === 'en' ? 'Filter' : 'Filtrar'}</label>
+            <select
+              value={selectedStatus}
+              onChange={e => setSelectedStatus(e.target.value as any)}
+              className="px-3 py-2 border border-neutral-300 rounded-lg text-sm"
+            >
+              <option value="all">{language === 'en' ? 'All' : 'Todas'}</option>
+              <option value="confirmed">{language === 'en' ? 'Confirmed' : 'Confirmadas'}</option>
+              <option value="cancelled">{language === 'en' ? 'Cancelled' : 'Canceladas'}</option>
+            </select>
+          </div>
+
           {sortedReservations.length === 0 ? (
             <div className="text-center py-8 sm:py-16">
               <div className="w-16 h-16 sm:w-24 sm:h-24 bg-gradient-to-br from-amber-100 to-orange-100 rounded-full flex items-center justify-center mx-auto mb-4 sm:mb-6">
@@ -301,10 +328,12 @@ export default function Reservations() {
               {sortedReservations.map((reservation, index) => (
                 <div
                   key={reservation.id}
-                  className="group relative bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 border border-neutral-200 hover:border-amber-300 p-4 sm:p-6 hover:scale-[1.02] transform"
+                  className={`group relative rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 p-4 sm:p-6 hover:scale-[1.02] transform border ${reservation.status === 'cancelled' ? 'bg-neutral-100 border-neutral-300' : 'bg-white border-neutral-200 hover:border-amber-300'}`}
                   style={{ animationDelay: `${index * 0.1}s` }}
                 >
-                  <div className="absolute inset-0 bg-gradient-to-r from-amber-50/30 to-orange-50/20 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                  {reservation.status !== 'cancelled' && (
+                    <div className="absolute inset-0 bg-gradient-to-r from-amber-50/30 to-orange-50/20 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                  )}
                   
                   <div className="relative z-10">
                     <div className="flex items-start space-x-3 mb-3">
@@ -320,12 +349,53 @@ export default function Reservations() {
                           {reservation.guests} {reservation.guests === 1 ? t('reservations.person') : t('reservations.people')}
                         </p>
                       </div>
-                      <button
-                        onClick={() => removeReservation(reservation.id)}
-                        className="group/btn relative w-8 h-8 sm:w-10 sm:h-10 bg-red-50 hover:bg-red-100 rounded-lg flex items-center justify-center transition-all duration-300 border border-red-200 hover:border-red-300 hover:shadow-lg flex-shrink-0"
-                      >
-                        <Trash2 className="h-4 w-4 sm:h-5 sm:w-5 text-red-500 group-hover/btn:text-red-600 transition-colors duration-300" />
-                      </button>
+                      {reservation.status === 'cancelled' ? (
+                        <div className="flex items-center gap-1">
+                          <span className="px-2 py-1 rounded-md text-xs font-semibold bg-neutral-200 text-neutral-700 flex items-center gap-1">
+                            <Ban className="h-3 w-3" /> {language === 'en' ? 'Cancelled' : 'Cancelada'}
+                          </span>
+                          <button
+                            onClick={() => {
+                              const ok = window.confirm(language === 'en' ? 'Delete this reservation permanently?' : '¿Eliminar esta reserva permanentemente?');
+                              if (!ok) return;
+                              removeReservation(reservation.id);
+                              if (showQRId === reservation.id) setShowQRId(null);
+                            }}
+                            className="w-8 h-8 sm:w-10 sm:h-10 bg-red-50 hover:bg-red-100 rounded-lg flex items-center justify-center transition-all duration-300 border border-red-200 hover:border-red-300 hover:shadow-lg flex-shrink-0"
+                            title={language === 'en' ? 'Delete' : 'Eliminar'}
+                          >
+                            <Trash className="h-4 w-4 text-red-500" />
+                          </button>
+                          <button
+                            onClick={() => setDetailsModal({open: true, reservation})}
+                            className="w-8 h-8 sm:w-10 sm:h-10 bg-neutral-100 hover:bg-neutral-200 rounded-lg flex items-center justify-center transition-all duration-300 border border-neutral-300 hover:border-neutral-400 hover:shadow-lg flex-shrink-0"
+                          >
+                            <Info className="h-4 w-4 text-neutral-600" />
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => setCancelModal({open: true, targetId: reservation.id, reason: ''})}
+                            className="group/btn relative w-8 h-8 sm:w-10 sm:h-10 bg-red-50 hover:bg-red-100 rounded-lg flex items-center justify-center transition-all duration-300 border border-red-200 hover:border-red-300 hover:shadow-lg flex-shrink-0"
+                            title={language === 'en' ? 'Cancel' : 'Cancelar'}
+                          >
+                            <Ban className="h-4 w-4 sm:h-5 sm:w-5 text-red-500 group-hover/btn:text-red-600 transition-colors duration-300" />
+                          </button>
+                          <button
+                            onClick={() => {
+                              const ok = window.confirm(language === 'en' ? 'Delete this reservation permanently?' : '¿Eliminar esta reserva permanentemente?');
+                              if (!ok) return;
+                              removeReservation(reservation.id);
+                              if (showQRId === reservation.id) setShowQRId(null);
+                            }}
+                            className="w-8 h-8 sm:w-10 sm:h-10 bg-red-50 hover:bg-red-100 rounded-lg flex items-center justify-center transition-all duration-300 border border-red-200 hover:border-red-300 hover:shadow-lg flex-shrink-0"
+                            title={language === 'en' ? 'Delete' : 'Eliminar'}
+                          >
+                            <Trash className="h-4 w-4 sm:h-5 sm:w-5 text-red-500" />
+                          </button>
+                        </div>
+                      )}
                     </div>
                     
                     <div className="grid grid-cols-1 gap-2 text-sm">
@@ -333,7 +403,7 @@ export default function Reservations() {
                         <div className="flex items-center text-neutral-600">
                           <Calendar className="h-4 w-4 mr-2 text-amber-500 flex-shrink-0" />
                           <span className="hidden sm:inline">
-                            {new Date(reservation.date).toLocaleDateString(locale, {
+                            {parseLocalDate(reservation.date).toLocaleDateString(locale, {
                               weekday: 'long',
                               year: 'numeric',
                               month: 'long',
@@ -341,7 +411,7 @@ export default function Reservations() {
                             })}
                           </span>
                           <span className="sm:hidden">
-                            {new Date(reservation.date).toLocaleDateString(locale, {
+                            {parseLocalDate(reservation.date).toLocaleDateString(locale, {
                               day: 'numeric',
                               month: 'short',
                               year: '2-digit'
@@ -573,6 +643,61 @@ export default function Reservations() {
                   className="flex-1 px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors font-medium"
                 >
                   {t('reservations.form.createReservation')}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {cancelModal.open && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl p-6 max-w-md w-full shadow-2xl">
+              <h3 className="text-lg font-bold mb-3">{language === 'en' ? 'Cancel reservation' : 'Cancelar reserva'}</h3>
+              <p className="text-sm text-neutral-600 mb-3">{language === 'en' ? 'Provide a reason (required)' : 'Ingrese el motivo (obligatorio)'}</p>
+              <textarea
+                value={cancelModal.reason}
+                onChange={e => setCancelModal({...cancelModal, reason: e.target.value})}
+                className="w-full border border-neutral-300 rounded-lg p-2 min-h-[100px]"
+                placeholder={language === 'en' ? 'Reason...' : 'Motivo...'}
+              />
+              <div className="mt-4 flex justify-end gap-2">
+                <button
+                  onClick={() => setCancelModal({open: false, targetId: null, reason: ''})}
+                  className="px-3 py-2 rounded-lg border border-neutral-300 text-neutral-700"
+                >
+                  {language === 'en' ? 'Close' : 'Cerrar'}
+                </button>
+                <button
+                  onClick={() => {
+                    if (!cancelModal.targetId) return;
+                    const ok = cancelReservation(cancelModal.targetId, cancelModal.reason, 'administrador');
+                    if (ok) setCancelModal({open: false, targetId: null, reason: ''});
+                  }}
+                  className="px-3 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700"
+                  disabled={!cancelModal.reason.trim()}
+                >
+                  {language === 'en' ? 'Confirm Cancel' : 'Confirmar cancelación'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {detailsModal.open && detailsModal.reservation && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl p-6 max-w-md w-full shadow-2xl">
+              <h3 className="text-lg font-bold mb-3">{language === 'en' ? 'Cancellation details' : 'Detalles de la cancelación'}</h3>
+              <div className="space-y-2 text-sm text-neutral-700">
+                <p><strong>{language === 'en' ? 'Reason:' : 'Motivo:'}</strong> {detailsModal.reservation.cancelReason || '-'}</p>
+                <p><strong>{language === 'en' ? 'By:' : 'Por:'}</strong> {detailsModal.reservation.cancelledBy || 'administrador'}</p>
+                <p><strong>{language === 'en' ? 'At:' : 'Fecha/Hora:'}</strong> {detailsModal.reservation.cancelledAt ? new Date(detailsModal.reservation.cancelledAt).toLocaleString(locale) : '-'}</p>
+              </div>
+              <div className="mt-4 flex justify-end">
+                <button
+                  onClick={() => setDetailsModal({open: false, reservation: null})}
+                  className="px-3 py-2 rounded-lg border border-neutral-300 text-neutral-700"
+                >
+                  {language === 'en' ? 'Close' : 'Cerrar'}
                 </button>
               </div>
             </div>

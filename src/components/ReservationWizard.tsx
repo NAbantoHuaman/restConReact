@@ -4,6 +4,11 @@ import { useTablesManager } from '../hooks/useTablesManager';
 import { RESTAURANT_ZONES, CONSUMPTION_TYPES } from '../config/restaurantConfig';
 import { useLanguage } from '../contexts/LanguageContext';
 import { formatTimeLabel } from '../utils/dateTime';
+// Crea una fecha local a partir de 'YYYY-MM-DD' para evitar desfases por zona horaria
+const parseLocalDate = (iso: string) => {
+  const [y, m, d] = iso.split('-').map(Number);
+  return new Date(y, (m || 1) - 1, d || 1);
+};
 
 interface WizardProps {
   onClose: () => void;
@@ -423,8 +428,11 @@ function StepFecha({ data, onUpdate }: { data: ReservationData; onUpdate: (data:
       const isAvailable = dayOfWeek !== 1;
       
       if (isAvailable) {
+        const y = date.getFullYear();
+        const m = String(date.getMonth() + 1).padStart(2, '0');
+        const d = String(date.getDate()).padStart(2, '0');
         dates.push({
-          date: date.toISOString().split('T')[0],
+          date: `${y}-${m}-${d}`,
           dayName: date.toLocaleDateString(locale, { weekday: 'long' }),
           dayNumber: date.getDate(),
           monthName: date.toLocaleDateString(locale, { month: 'long' }),
@@ -487,7 +495,7 @@ function StepFecha({ data, onUpdate }: { data: ReservationData; onUpdate: (data:
         <div className="mt-6 bg-amber-50 border border-amber-200 rounded-lg p-4 text-center">
           <p className="text-amber-800">
             <span className="font-semibold">{t('reservations.selectedDate')}: </span>
-            {new Date(data.date).toLocaleDateString(locale, {
+            {parseLocalDate(data.date).toLocaleDateString(locale, {
               weekday: 'long',
               year: 'numeric',
               month: 'long',
@@ -893,7 +901,7 @@ function StepDatos({ data, onUpdate }: { data: ReservationData; onUpdate: (data:
                 year: 'numeric',
                 month: 'long',
                 day: 'numeric'
-              }).format(new Date(data.date)) : t('reservations.notSelected')}
+              }).format(parseLocalDate(data.date)) : t('reservations.notSelected')}
             </p>
             <p className="text-amber-800">
               <span className="font-medium">{t('reservations.time')}:</span> {data.time ? formatTimeLabel(language, data.time) : t('reservations.notSelected')}

@@ -1,4 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
+import { restaurantConfig } from '../config/restaurantConfig';
+import { getTableShift } from '../config/tableShifts';
 
 export interface Table {
   id: number;
@@ -21,7 +23,12 @@ export interface Reservation {
   adults: number;
   children: number;
   babies: number;
-  status: 'confirmed';
+  status: 'confirmed' | 'cancelled';
+  cancelReason?: string;
+  cancelledAt?: number;
+  cancelledBy?: string;
+  attended?: boolean;
+  reactivatedAt?: number;
   zone?: string;
   table?: string; 
   consumptionType?: string;
@@ -115,6 +122,7 @@ export function useTablesManager() {
       const tableReservations = currentReservations.filter((r) => r.tableId === table.id);
 
       const hasCurrentReservation = tableReservations.some((r) => {
+        if (r.status === 'cancelled') return false;
         if (r.date !== todayStr) return false;
         const resDateTime = new Date(`${r.date}T${r.time}`);
         const diff = minutesBetween(resDateTime, now);
@@ -122,6 +130,7 @@ export function useTablesManager() {
       });
 
       const hasUpcomingTodayOrFuture = tableReservations.some((r) => {
+        if (r.status === 'cancelled') return false;
         if (r.date === todayStr) {
           return r.time >= currentTimeStr; 
         }
@@ -162,8 +171,13 @@ export function useTablesManager() {
 
   const isTableAvailableForDateTime = useCallback(
     (tableId: number, date: string, time: string): boolean => {
+      // Validar turno de la mesa contra la hora solicitada
+      const shift = getShiftForTime(time);
+      const tableShift = getTableShift(tableId);
+      if (!isTableSupportsShift(tableShift, shift)) return false;
       const tableReservations = reservations.filter((r) => r.tableId === tableId);
       return !tableReservations.some((r) => {
+        if (r.status === 'cancelled') return false;
         if (r.date !== date) return false;
         const resDateTime = new Date(`${date}T${r.time}`);
         const requested = new Date(`${date}T${time}`);
@@ -193,6 +207,10 @@ export function useTablesManager() {
     (date: string, time: string, guestCount: number): Table[] => {
       return tables.filter((table) => {
         if (table.capacity < guestCount) return false;
+        // Validar turno
+        const shift = getShiftForTime(time);
+        const tableShift = getTableShift(table.id);
+        if (!isTableSupportsShift(tableShift, shift)) return false;
         return isTableAvailableForDateTime(table.id, date, time);
       });
     },
@@ -290,6 +308,66 @@ export function useTablesManager() {
     [reservations, updateTablesStatus]
   );
 
+  const cancelReservation = useCallback(
+    (reservationId: number, reason: string, by?: string) => {
+      if (!reason || !reason.trim()) {
+        return false;
+      }
+      const idx = reservations.findIndex(r => r.id === reservationId);
+      if (idx === -1) return false;
+      const updated = { ...reservations[idx], status: 'cancelled', cancelReason: reason.trim(), cancelledAt: Date.now(), cancelledBy: by || 'administrador' } as Reservation;
+      const next = [...reservations];
+      next[idx] = updated;
+      setReservations(next);
+
+      const updatedTables = updateTablesStatus(INITIAL_TABLES, next);
+      setTables(updatedTables);
+
+      localStorage.setItem(STORAGE.reservations, JSON.stringify(next));
+      localStorage.setItem(STORAGE.tables, JSON.stringify(updatedTables));
+
+      window.dispatchEvent(
+        new CustomEvent('reservationUpdated', {
+          detail: { reservations: next, tables: updatedTables },
+        })
+      );
+
+      return true;
+    },
+    [reservations, updateTablesStatus]
+  );
+
+  const reactivateReservation = useCallback(
+    (reservationId: number) => {
+      const idx = reservations.findIndex(r => r.id === reservationId);
+      if (idx === -1) return false;
+      const target = reservations[idx];
+      // Validación de disponibilidad
+      const canReactivate = isTableAvailableForDateTime(target.tableId, target.date, target.time);
+      if (!canReactivate) return false;
+
+      const updated = { ...target, status: 'confirmed', cancelReason: undefined, cancelledAt: undefined, cancelledBy: undefined, reactivatedAt: Date.now() } as Reservation;
+      const next = [...reservations];
+      next[idx] = updated;
+      setReservations(next);
+
+      const updatedTables = updateTablesStatus(INITIAL_TABLES, next);
+      setTables(updatedTables);
+
+      localStorage.setItem(STORAGE.reservations, JSON.stringify(next));
+      localStorage.setItem(STORAGE.tables, JSON.stringify(updatedTables));
+
+      window.dispatchEvent(
+        new CustomEvent('reservationUpdated', {
+          detail: { reservations: next, tables: updatedTables },
+        })
+      );
+
+      return true;
+    },
+    [reservations, updateTablesStatus, isTableAvailableForDateTime]
+  );
+
   const refreshData = useCallback(() => {
     loadTablesAndReservations();
   }, [loadTablesAndReservations]);
@@ -304,6 +382,32 @@ export function useTablesManager() {
     getWizardIdFromTableId,
     addReservation,
     removeReservation,
+    cancelReservation,
+    reactivateReservation,
     refreshReservations: refreshData,
   };
+}
+
+// Helpers de turno (almuerzo/cena) basados en configuración de horarios
+type Shift = 'lunch' | 'dinner'
+
+function parseTimeToMinutes(s: string): number {
+  const [h, m] = s.split(':').map(Number);
+  return h * 60 + (m || 0);
+}
+
+function getShiftForTime(time: string): Shift {
+  const t = parseTimeToMinutes(time);
+  const lunchStart = parseTimeToMinutes(restaurantConfig.businessHours.lunch.start);
+  const lunchEnd = parseTimeToMinutes(restaurantConfig.businessHours.lunch.end);
+  const dinnerStart = parseTimeToMinutes(restaurantConfig.businessHours.dinner.start);
+  const dinnerEnd = parseTimeToMinutes(restaurantConfig.businessHours.dinner.end);
+  if (t >= lunchStart && t <= lunchEnd) return 'lunch';
+  if (t >= dinnerStart && t <= dinnerEnd) return 'dinner';
+  // Por defecto, si queda fuera de rangos, asumimos cena
+  return 'dinner';
+}
+
+function isTableSupportsShift(tableShift: ReturnType<typeof getTableShift>, shift: Shift): boolean {
+  return tableShift === 'both' || tableShift === shift;
 }
